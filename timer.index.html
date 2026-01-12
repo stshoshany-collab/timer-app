@@ -1,0 +1,217 @@
+import React, { useState, useEffect } from 'react';
+
+export default function LessonTimer() {
+    const stages = [
+        { 
+            name: 'מליאה', 
+            duration: 15 * 60, 
+            color: 'from-blue-400 to-blue-600',
+            emoji: '',
+            description: 'שיעור מליאה - כולם יחד'
+        },
+        { 
+            name: 'ביצוע משימות', 
+            duration: 10 * 60, 
+            color: 'from-green-400 to-green-600',
+            emoji: ✍️',
+            description: 'עבודה עצמאית בשקט'
+        },
+        { 
+            name: 'שיקוף הצלחות וסיכום', 
+            duration: 5 * 60, 
+            color: 'from-purple-400 to-purple-600',
+            emoji: '',
+            description: 'חוגגים את ההצלחות'
+        }
+    ];
+
+    const [currentStage, setCurrentStage] = useState(0);
+    const [timeLeft, setTimeLeft] = useState(stages[0].duration);
+    const [isRunning, setIsRunning] = useState(false);
+    const [showConfetti, setShowConfetti] = useState(false);
+
+    useEffect(() => {
+        let interval;
+        if (isRunning && timeLeft > 0) {
+            interval = setInterval(() => {
+                setTimeLeft(prev => {
+                    if (prev <= 1) {
+                        if (currentStage < stages.length - 1) {
+                            setShowConfetti(true);
+                            setTimeout(() => setShowConfetti(false), 3000);
+                            setCurrentStage(currentStage + 1);
+                            return stages[currentStage + 1].duration;
+                        } else {
+                            setIsRunning(false);
+                            setShowConfetti(true);
+                            setTimeout(() => setShowConfetti(false), 3000);
+                            return 0;
+                        }
+                    }
+                    return prev - 1;
+                });
+            }, 1000);
+        }
+        return () => clearInterval(interval);
+    }, [isRunning, timeLeft, currentStage]);
+
+    const formatTime = (seconds) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return { mins, secs };
+    };
+
+    const resetTimer = () => {
+        setIsRunning(false);
+        setCurrentStage(0);
+        setTimeLeft(stages[0].duration);
+    };
+
+    const totalDuration = stages.reduce((sum, stage) => sum + stage.duration, 0);
+    const elapsedTime = stages.slice(0, currentStage).reduce((sum, stage) => sum + stage.duration, 0) + 
+                       (stages[currentStage].duration - timeLeft);
+    const progress = (elapsedTime / totalDuration) * 100;
+    
+    const time = formatTime(timeLeft);
+    const isLastMinute = timeLeft <= 60;
+    const isFinished = timeLeft === 0 && currentStage === stages.length - 1;
+
+    return (
+        <div className="min-h-screen bg-gradient-to-br from-purple-600 via-purple-700 to-indigo-800 flex items-center justify-center p-4" dir="rtl">
+            {showConfetti && (
+                <div className="fixed inset-0 pointer-events-none z-50">
+                    {[...Array(30)].map((_, i) => (
+                        <div
+                            key={i}
+                            className="absolute text-4xl animate-ping"
+                            style={{
+                                left: `${Math.random() * 100}%`,
+                                top: `${Math.random() * 100}%`,
+                                animationDuration: `${2 + Math.random() * 2}s`
+                            }}
+                        >
+                            🎉
+                        </div>
+                    ))}
+                </div>
+            )}
+            
+            <div className="max-w-2xl w-full">
+                {/* Main Timer Card */}
+                <div className={`bg-white rounded-3xl shadow-2xl p-8 md:p-12 ${isLastMinute && isRunning ? 'animate-pulse' : ''}`}
+                     style={{boxShadow: '0 0 60px rgba(255, 255, 255, 0.3)'}}>
+                    
+                    {/* Current Stage Display */}
+                    <div className="text-center mb-8">
+                        <div className="text-6xl md:text-8xl mb-4 transition-all duration-500">
+                            {stages[currentStage].emoji}
+                        </div>
+                        <div className={`inline-block bg-gradient-to-r ${stages[currentStage].color} text-white px-8 py-3 rounded-full text-xl md:text-2xl font-bold mb-3 shadow-lg`}>
+                            {stages[currentStage].name}
+                        </div>
+                        <p className="text-gray-600 text-lg mt-2">
+                            {stages[currentStage].description}
+                        </p>
+                    </div>
+
+                    {/* Timer Display */}
+                    <div className="text-center mb-8">
+                        <div className={`text-9xl md:text-[12rem] font-bold ${
+                            isFinished ? 'text-green-500' : 
+                            isLastMinute && isRunning ? 'text-red-500' : 
+                            'text-gray-800'
+                        }`}
+                             style={{textShadow: '0 0 30px rgba(255, 255, 255, 0.8)'}}>
+                            <span>{time.mins.toString().padStart(2, '0')}</span>
+                            <span className="animate-pulse">:</span>
+                            <span>{time.secs.toString().padStart(2, '0')}</span>
+                        </div>
+                        {isLastMinute && isRunning && (
+                            <div className="text-red-500 font-bold text-xl mt-4 animate-pulse">
+                                ⚠️ דקה אחרונה!
+                            </div>
+                        )}
+                        {isFinished && (
+                            <div className="text-green-500 font-bold text-2xl mt-4">
+                                🎊 כל הכבוד! השיעור הסתיים 🎊
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Progress Bar */}
+                    <div className="mb-8">
+                        <div className="h-6 bg-gray-200 rounded-full overflow-hidden shadow-inner">
+                            <div 
+                                className={`h-full bg-gradient-to-r ${stages[currentStage].color} transition-all duration-1000 shadow-lg`}
+                                style={{ width: `${progress}%` }}
+                            />
+                        </div>
+                        <div className="flex justify-between text-sm text-gray-600 mt-2 font-bold">
+                            <span>התחלה</span>
+                            <span>{Math.round(progress)}%</span>
+                            <span>סיום</span>
+                        </div>
+                    </div>
+
+                    {/* Stage Timeline */}
+                    <div className="grid grid-cols-3 gap-4 mb-8">
+                        {stages.map((stage, index) => (
+                            <div 
+                                key={index}
+                                className={`p-4 rounded-2xl text-center transition-all transform ${
+                                    index === currentStage 
+                                        ? `bg-gradient-to-br ${stage.color} text-white scale-110 shadow-2xl` 
+                                        : index < currentStage 
+                                        ? 'bg-gray-200 text-gray-500 scale-95' 
+                                        : 'bg-gray-100 text-gray-400 scale-95'
+                                }`}
+                            >
+                                <div className="text-3xl mb-2">{stage.emoji}</div>
+                                <div className="text-sm font-bold mb-1">
+                                    {stage.name}
+                                </div>
+                                <div className={`text-2xl font-bold ${index === currentStage ? 'text-white' : ''}`}>
+                                    {Math.floor(stage.duration / 60)}′
+                                </div>
+                                {index < currentStage && (
+                                    <div className="text-xs mt-1 font-bold">✓ הושלם</div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Controls */}
+                    <div className="flex flex-col sm:flex-row justify-center gap-4">
+                        <button
+                            onClick={() => setIsRunning(!isRunning)}
+                            disabled={isFinished}
+                            className={`flex items-center justify-center gap-3 px-12 py-5 rounded-2xl font-bold text-2xl transition-all shadow-xl transform hover:scale-105 ${
+                                isFinished 
+                                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                    : isRunning
+                                    ? 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white'
+                                    : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white'
+                            }`}
+                        >
+                            <span className="text-4xl">{isRunning ? '⏸️' : '▶️'}</span>
+                            {isRunning ? 'עצור' : 'התחל'}
+                        </button>
+                        <button
+                            onClick={resetTimer}
+                            className="flex items-center justify-center gap-3 bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white px-12 py-5 rounded-2xl font-bold text-2xl transition-all shadow-xl transform hover:scale-105"
+                        >
+                            <span className="text-4xl">🔄</span>
+                            איפוס
+                        </button>
+                    </div>
+                </div>
+
+                {/* Info Footer */}
+                <div className="text-center mt-6 text-white text-sm opacity-80">
+                    <p className="font-bold">⏱️ טיימר שיעור מובנה</p>
+                    <p className="mt-1">15 דקות מליאה • 10 דקות משימות • 5 דקות סיכום</p>
+                </div>
+            </div>
+        </div>
+    );
+}
